@@ -87,7 +87,7 @@
                 <hr size="10">
             {% endif %}
 
-
+            CURR IS: {{ curr }}
 
 
             {% if current_user.is_authenticated %}
@@ -143,7 +143,8 @@
 
             <form action="." method="POST">
                 <input type="hidden" name="sortprice" value="low">
-                <input type="hidden" name="{{ curr }}" value={{ curval }}>
+                <input type="hidden" name="sgenre" value="{{ pgenre }}">
+                <input type="hidden" name="gamename" value="{{ pgamename }}">
                 <input type="submit" class="btn btn-success" value="Sort by Price (descending)">
 
             </form>
@@ -153,7 +154,8 @@
 
             <form action="." method="POST">
                 <input type="hidden" name="sortprice" value="high">
-                <input type="hidden" name="{{ curr }}" value={{ curval }}>
+                <input type="hidden" name="sgenre" value="{{ pgenre }}">
+                <input type="hidden" name="gamename" value="{{ pgamename }}">
                 <input type="submit" class="btn btn-info" value="Sort by Price (ascending)">
 
             </form>
