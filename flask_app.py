@@ -1,3 +1,62 @@
+from datetime import datetime
+from flask import Flask, redirect, render_template, request, url_for
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_login import current_user, login_required, login_user, LoginManager, logout_user, UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
+from sqlalchemy import desc
+from sqlalchemy.sql import func
+
+app = Flask(__name__)
+app.config["DEBUG"] = True
+
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
+    username="tilted4",
+    password="grades777",
+    hostname="tilted4.mysql.pythonanywhere-services.com",
+    databasename="tilted4$comments",
+)
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+app.secret_key = "fghr393ghdg93ggh3933"
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False)
+    birth_date = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128))
+    first_name = db.Column(db.String(128))
+    comments = db.relationship('Comment')
+    ratings = db.relationship('Rate')
+
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+    def get_id(self):
+        return self.username
+
+    def __repr__(self):
+        return "<User(fname='%s', lname='%s', username='%s', email='%s', birth_date='%s')>" % (
+                self.first_name, self.last_name, self.username, self.email, self.birth_date)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.filter_by(username=user_id).first()
+
 class Game(db.Model):
   __tablename__ = "game"
 
@@ -10,6 +69,8 @@ class Game(db.Model):
   #comment_id = db.Column(db.Integer, nullable = True) #how to handle this
   genre = db.Column(db.String(256), nullable = False)
   price = db.Column(db.Float, nullable = False)
+  publisher = db.relationship("Publisher")
+  developer = db.relationship("Developer")
 
   def __repr__(self):
     return "<Game(title='%s', summary='%s')>" % (
@@ -107,7 +168,7 @@ def index():
     """if not current_user.is_authenticated:
         return redirect(url_for('index'))"""
 
-    if 'gamename' in request.form and 'sgenre' in request.form:
+    """if 'gamename' in request.form and request.form["gamename"] != "nothing" and 'sgenre' in request.form and request.form["sgenre"] != "nothing":
         if 'sortprice' in request.form:
             if request.form["sortprice"] == "high":
                 searchResults=Game.query.filter(Game.title.contains(request.form["gamename"]), Game.genre==request.form["sgenre"]).order_by(Game.price)
@@ -117,10 +178,10 @@ def index():
             searchResults=Game.query.filter(Game.title.contains(request.form["gamename"]), Game.genre==request.form["sgenre"])
         myAvg=Game.query.with_entities(func.avg(Game.price).label('average')).filter(Game.title.contains(request.form["gamename"]), Game.genre==request.form["sgenre"]).first()
         return render_template("main_page.html", comments=Comment.query.all(), users=User.query.all(),
-         games=Game.query.all(), genres=genrelist, avgprice=myAvg.average, results=searchResults, curr="gamename", curval =request.form["gamename"] )
+         games=Game.query.all(), genres=genrelist, avgprice=myAvg.average, results=searchResults, curr="combo", curval =request.form["gamename"] )
+"""
 
-
-    elif 'sgenre' in request.form and request.form["sgenre"] != "nothing":
+    if 'sgenre' in request.form and request.form["sgenre"] != "nothing":
         if 'sortprice' in request.form:
             if request.form["sortprice"] == "high":
                 searchResults=Game.query.filter_by(genre=request.form["sgenre"]).order_by(Game.price)
@@ -218,9 +279,10 @@ def game():
         for x in myConsoles:
             myConsoleNames.append(Console.query.filter_by(id=x).first().name)
 
-
-        onedev=Developer.query.filter_by(id=onegame.developer_id).first()
-        onepub=Publisher.query.filter_by(id=onegame.publisher_id).first()
+        onedev=db.session.query(Developer).join(Game, Developer.id==onegame.developer_id).first()
+        #onedev=Developer.query.filter_by(id=onegame.developer_id).first()
+        onepub=db.session.query(Publisher).join(Game, Publisher.id==onegame.publisher_id).first()
+        #onepub=Publisher.query.filter_by(id=onegame.publisher_id).first()
         return render_template("game.html", error=False, game=onegame, dev=onedev, pub=onepub, cons=myConsoleNames)
 
 
